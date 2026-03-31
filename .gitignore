@@ -40,8 +40,6 @@ env/
 *.pt
 *.weights
 yolov8n.pt
-yolov4-tiny.weights
-yolov4-tiny.cfg
 
 # Project specific
 ReferenceImages/
