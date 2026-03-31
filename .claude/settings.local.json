@@ -1,0 +1,27 @@
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "https://openrouter.ai/api",
+    "ANTHROPIC_AUTH_TOKEN": "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",
+    "ANTHROPIC_API_KEY": "",
+    "ANTHROPIC_MODEL": "stepfun/step-3.5-flash:free"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(rm -rf .venv)",
+      "Bash(python -m venv .venv)",
+      "Bash(docker-compose ps:*)",
+      "Bash(python test_pipeline_full.py)",
+      "Bash(grep -E \"\\\\.\\(py|log|txt\\)$\")",
+      "Bash(python train_pipeline.py)",
+      "Bash(pip install:*)",
+      "Bash(source backend/venv/Scripts/activate)",
+      "Bash(python test_schema_generation.py)",
+      "Bash(python test_lime_car.py)",
+      "Bash(docker-compose exec:*)",
+      "Bash(docker-compose logs:*)",
+      "Bash(python \"Loan Prediction.py\")",
+      "Bash(python -m py_compile app/workers/tasks.py)"
+    ]
+  }
+}
