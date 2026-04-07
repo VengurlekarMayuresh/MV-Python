@@ -139,7 +139,7 @@ while True:
             # Generic width of 15 inches for unknown objects
             distance = distance_finder(800.0, 15.0, width_in_frame)
 
-        if distance < 10.0:  # Less than 10 inches is "very close"
+        if distance < 30.0:  # Alert when object is within 30 inches
             soundThread = threading.Thread(target=sound)
             soundThread.start()
             cv.putText(frame, "ALERT: Object Very Close!", (x, y - 20), FONTS, 0.6, (0, 0, 255), 2)
