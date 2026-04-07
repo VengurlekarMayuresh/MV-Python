@@ -23,6 +23,11 @@ class_names = []
 with open("classes.txt", "r") as f:
     class_names = [cname.strip() for cname in f.readlines()]
 
+# COCO class IDs for our target classes: person=0, cell phone=67, book=73
+# Mapping from COCO ID to our class_names index
+CLASS_ID_MAP = {0: 0, 67: 1, 73: 2}
+ALLOWED_CLASS_IDS = {0, 67, 73}
+
 # Load YOLOv8 model (latest)
 yoloNet = YOLO('yolov8n.pt')  # Uses yolov8n.pt - will auto-download
 
@@ -36,6 +41,13 @@ def object_detector(image):
         x1, y1, x2, y2, score, class_id = result.tolist()
         class_id = int(class_id)
 
+        # Filter: only process person, cell phone, and book
+        if class_id not in ALLOWED_CLASS_IDS:
+            continue
+
+        # Map COCO class ID to our class_names index
+        class_idx = CLASS_ID_MAP[class_id]
+
         if score < CONFIDENCE_THRESHOLD:
             continue
 
@@ -44,9 +56,9 @@ def object_detector(image):
         height = int(y2 - y1)
         box = (int(x1), int(y1), width, height)
 
-        color = COLORS[class_id % len(COLORS)]
+        color = COLORS[class_idx % len(COLORS)]
 
-        label = "%s : %f" % (class_names[class_id], score)
+        label = "%s : %f" % (class_names[class_idx], score)
 
         # draw rectangle on and label on object
         cv.rectangle(image, box, color, 2)
