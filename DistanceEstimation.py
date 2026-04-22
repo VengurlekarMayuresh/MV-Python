@@ -7,12 +7,22 @@ import os
 
 engine = pyttsx3.init()
 
-# Load Calibration Data
+# Load Calibration Data (shared fallback distance)
 if os.path.exists("calibration_data.txt"):
     with open("calibration_data.txt", "r") as f:
         KNOWN_DISTANCE = float(f.read().strip())
 else:
     KNOWN_DISTANCE = 30.0  # Default if file missing
+
+# Load per-object calibration distances (preferred over shared)
+def load_calibration_dist(filename, fallback):
+    if os.path.exists(filename):
+        with open(filename, "r") as f:
+            return float(f.read().strip())
+    return fallback
+
+PERSON_CALIB_DIST = load_calibration_dist("person_calibration_dist.txt", KNOWN_DISTANCE)
+MOBILE_CALIB_DIST = load_calibration_dist("mobile_calibration_dist.txt", KNOWN_DISTANCE)
 
 ALERT_DISTANCE = 25.0  # INCHES
 PERSON_WIDTH = 16  # INCHES
@@ -77,26 +87,42 @@ def sound():
 
 # Automatic Calibration using saved references
 try:
+    # Safest: Use the exact pixel width saved during capture
+    with open("person_width.txt", "r") as f:
+        person_width_in_rf = float(f.read().strip())
+    print("Loaded person pixel width from file.")
+except Exception:
     ref_person = cv.imread('ReferenceImages/person_ref.png')
     person_data = object_detector(ref_person)
-    person_width_in_rf = person_data[0][1]
-    focal_person = focal_length_finder(KNOWN_DISTANCE, PERSON_WIDTH, person_width_in_rf)
-    print("Person calibration successful.")
-except:
-    focal_person = 800.0
-    print("Person calibration failed, using default.")
+    person_only = [d for d in person_data if d[0] == 'person']
+    if person_only:
+        person_width_in_rf = person_only[0][1]
+    else:
+        person_width_in_rf = 15.0 # fallback
+        print("Could not detect person in ref image.")
+
+focal_person = focal_length_finder(PERSON_CALIB_DIST, PERSON_WIDTH, person_width_in_rf)
+print(f"Person calibration successful. Dist={PERSON_CALIB_DIST}in, PixelW={person_width_in_rf}px, Focal={round(focal_person,2)}")
 
 try:
+    # Safest: Use the exact pixel width saved during capture
+    with open("mobile_width.txt", "r") as f:
+        mobile_width_in_rf = float(f.read().strip())
+    print("Loaded mobile pixel width from file.")
+except Exception:
     ref_mobile = cv.imread('ReferenceImages/mobile_ref.png')
     mobile_data = object_detector(ref_mobile)
-    mobile_width_in_rf = mobile_data[0][1]
-    focal_mobile = focal_length_finder(KNOWN_DISTANCE, MOBILE_WIDTH, mobile_width_in_rf)
-    print("Mobile calibration successful.")
-except:
-    focal_mobile = 800.0
-    print("Mobile calibration failed, using default.")
+    mobile_only = [d for d in mobile_data if d[0] == 'cell phone']
+    if mobile_only:
+        mobile_width_in_rf = mobile_only[0][1]
+    else:
+        mobile_width_in_rf = 15.0 # fallback
+        print("Could not detect cell phone in ref image.")
 
-print(f"Using Calibration Distance: {KNOWN_DISTANCE} inches")
+focal_mobile = focal_length_finder(MOBILE_CALIB_DIST, MOBILE_WIDTH, mobile_width_in_rf)
+print(f"Mobile calibration successful. Dist={MOBILE_CALIB_DIST}in, PixelW={mobile_width_in_rf}px, Focal={round(focal_mobile,2)}")
+
+print(f"Person calib dist: {PERSON_CALIB_DIST} inches | Mobile calib dist: {MOBILE_CALIB_DIST} inches")
 
 cap = cv.VideoCapture(0)
 while True:

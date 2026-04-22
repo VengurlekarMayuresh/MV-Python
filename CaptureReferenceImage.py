@@ -85,7 +85,11 @@ while True:
             with open("person_width.txt", "w") as f:
                 f.write(str(width))
 
-            print(f"Person captured | width: {width}px")
+            # Save the calibration distance specifically for person
+            with open("person_calibration_dist.txt", "w") as f:
+                f.write(str(KNOWN_DISTANCE))
+
+            print(f"Person captured | width: {width}px | at distance: {KNOWN_DISTANCE} inches")
         else:
             print("No person detected!")
 
@@ -101,7 +105,11 @@ while True:
             with open("mobile_width.txt", "w") as f:
                 f.write(str(width))
 
-            print(f"Mobile captured | width: {width}px")
+            # Save the calibration distance specifically for mobile
+            with open("mobile_calibration_dist.txt", "w") as f:
+                f.write(str(KNOWN_DISTANCE))
+
+            print(f"Mobile captured | width: {width}px | at distance: {KNOWN_DISTANCE} inches")
         else:
             print("No mobile detected!")
 
