@@ -3,11 +3,18 @@ import numpy as np
 from ultralytics import YOLO
 import threading
 import pyttsx3
+import os
 
 engine = pyttsx3.init()
 
-# Distance constants
-KNOWN_DISTANCE = 45  # INCHES
+# Load Calibration Data
+if os.path.exists("calibration_data.txt"):
+    with open("calibration_data.txt", "r") as f:
+        KNOWN_DISTANCE = float(f.read().strip())
+else:
+    KNOWN_DISTANCE = 30.0  # Default if file missing
+
+ALERT_DISTANCE = 25.0  # INCHES
 PERSON_WIDTH = 16  # INCHES
 MOBILE_WIDTH = 3.0  # INCHES
 
@@ -19,7 +26,6 @@ NMS_THRESHOLD = 0.3
 COLORS = [(255, 0, 0), (255, 0, 255), (0, 255, 255), (255, 255, 0), (0, 255, 0), (255, 0, 0)]
 GREEN = (0, 255, 0)
 BLACK = (0, 0, 0)
-# defining fonts
 FONTS = cv.FONT_HERSHEY_COMPLEX
 
 # getting class names from classes.txt file
@@ -27,63 +33,36 @@ class_names = []
 with open("classes.txt", "r") as f:
     class_names = [cname.strip() for cname in f.readlines()]
 
-# COCO class IDs for our target classes: person=0, cell phone=67, book=73
-ALLOWED_CLASS_IDS = {0: 0, 67: 1, 73: 2}  # COCO ID -> index in class_names
+# COCO class IDs mapping
+ALLOWED_CLASS_IDS = {0: 0, 67: 1, 73: 2}
 
-# Load YOLOv8 model (latest)
-yoloNet = YOLO('yolov8n.pt')  # Use yolov8n.pt - download automatically
+# Load YOLOv8 model
+yoloNet = YOLO('yolov8n.pt')
 
-# object detector function / method
 def object_detector(image):
-    # YOLOv8 inference
     results = yoloNet(image, verbose=False)[0]
-
     data_list = []
     for result in results.boxes.data:
         x1, y1, x2, y2, score, class_id = result.tolist()
         class_id = int(class_id)
-
-        # Filter: only process person, cell phone, and book
-        if class_id not in ALLOWED_CLASS_IDS:
-            continue
-
-        # Map COCO class ID to our class_names index
+        if class_id not in ALLOWED_CLASS_IDS: continue
         class_idx = ALLOWED_CLASS_IDS[class_id]
-
-        if score < CONFIDENCE_THRESHOLD:
-            continue
-
-        # Convert to xywh format (x, y, width, height) for compatibility
+        if score < CONFIDENCE_THRESHOLD: continue
         width = int(x2 - x1)
         height = int(y2 - y1)
         box = (int(x1), int(y1), width, height)
-
         color = COLORS[class_idx % len(COLORS)]
-
         label = "%s : %f" % (class_names[class_idx], score)
-
-        # draw rectangle on and label on object
         cv.rectangle(image, box, color, 2)
         cv.putText(image, label, (box[0], box[1] - 14), FONTS, 0.5, color, 2)
-
-        # getting the data
-        # 1: class name  2: object width in pixels, 3: position where have to draw text(distance)
         data_list.append([class_names[class_idx], width, (box[0], box[1] - 2)])
-
-        # returning list containing the object data.
     return data_list
 
-
 def focal_length_finder(measured_distance, real_width, width_in_rf):
-    focal_length = (width_in_rf * measured_distance) / real_width
-    return focal_length
+    return (width_in_rf * measured_distance) / real_width
 
-
-# distance finder function
-def distance_finder(focal_length, real_object_width, width_in_frmae):
-    distance = (real_object_width * focal_length) / width_in_frmae
-    return distance
-
+def distance_finder(focal_length, real_object_width, width_in_frame):
+    return (real_object_width * focal_length) / width_in_frame
 
 is_speaking = False
 def sound():
@@ -93,63 +72,55 @@ def sound():
     try:
         engine.say("Object very close")
         engine.runAndWait()
-    except:
-        pass
+    except: pass
     is_speaking = False
-    return 0
 
-
+# Automatic Calibration using saved references
 try:
-    # reading the reference image from dir
-    ref_person = cv.imread('ReferenceImages/image14.png')
+    ref_person = cv.imread('ReferenceImages/person_ref.png')
     person_data = object_detector(ref_person)
     person_width_in_rf = person_data[0][1]
     focal_person = focal_length_finder(KNOWN_DISTANCE, PERSON_WIDTH, person_width_in_rf)
+    print("Person calibration successful.")
 except:
-    person_width_in_rf = 200
-    focal_person = 800.0  # Default focal length
+    focal_person = 800.0
+    print("Person calibration failed, using default.")
 
 try:
-    ref_mobile = cv.imread('ReferenceImages/image4.png')
+    ref_mobile = cv.imread('ReferenceImages/mobile_ref.png')
     mobile_data = object_detector(ref_mobile)
-    # the second object might be the cell phone, but let's just grab the first one if it exists
     mobile_width_in_rf = mobile_data[0][1]
     focal_mobile = focal_length_finder(KNOWN_DISTANCE, MOBILE_WIDTH, mobile_width_in_rf)
+    print("Mobile calibration successful.")
 except:
-    mobile_width_in_rf = 100
     focal_mobile = 800.0
+    print("Mobile calibration failed, using default.")
 
-print(f"Person width in pixels : {person_width_in_rf} mobile width in pixel: {mobile_width_in_rf}")
+print(f"Using Calibration Distance: {KNOWN_DISTANCE} inches")
 
 cap = cv.VideoCapture(0)
 while True:
     ret, frame = cap.read()
-
+    if not ret: break
     data = object_detector(frame)
     for d in data:
-        obj_name = d[0]
-        width_in_frame = d[1]
-        x, y = d[2]
-
+        obj_name, width_in_frame, (x, y) = d
         if obj_name == 'person':
             distance = distance_finder(focal_person, PERSON_WIDTH, width_in_frame)
         elif obj_name == 'cell phone':
             distance = distance_finder(focal_mobile, MOBILE_WIDTH, width_in_frame)
         else:
-            # Generic width of 15 inches for unknown objects
             distance = distance_finder(800.0, 15.0, width_in_frame)
 
-        if distance < 30.0:  # Alert when object is within 30 inches
-            soundThread = threading.Thread(target=sound)
-            soundThread.start()
+        if distance < ALERT_DISTANCE:
+            threading.Thread(target=sound).start()
             cv.putText(frame, "ALERT: Object Very Close!", (x, y - 20), FONTS, 0.6, (0, 0, 255), 2)
+        
         cv.rectangle(frame, (x, y-3), (x+150, y+23), BLACK, -1)
         cv.putText(frame, f'Dis: {round(distance, 2)} inch', (x+5, y+13), FONTS, 0.48, GREEN, 2)
 
     cv.imshow('frame', frame)
+    if cv.waitKey(1) == ord('q'): break
 
-    key = cv.waitKey(1)
-    if key == ord('q'):
-        break
 cv.destroyAllWindows()
 cap.release()
