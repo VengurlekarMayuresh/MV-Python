@@ -41,9 +41,9 @@ Where:
 ### Process Flow:
 ```
 1. Calibration Phase:
-   - Take reference photos of person & phone at KNOWN_DISTANCE (45 inches)
+   - Take reference photos of person & phone at KNOWN_DISTANCE (30 inches)
    - System detects objects → measures pixel width
-   - Calculates focal length: F = (pixel_width × 45) / real_width
+   - Calculates focal length: F = (pixel_width × 30) / real_width
 
 2. Detection Phase (Real-time):
    - YOLO detects objects in video frame
@@ -140,13 +140,13 @@ python CaptureReferenceImage.py
 ```
 
 **Procedure:**
-1. Position a **person** at exactly 45 inches from camera
+1. Position a **person** at exactly 30 inches from camera
 2. Press `'c'` to capture image → saves as `image14.png`
-3. Position a **cell phone** at exactly 45 inches
+3. Position a **cell phone** at exactly 30 inches
 4. Press `'c'` to capture image → saves as `image4.png` (or later images)
 5. Press `'q'` to quit
 
-**Why 45 inches?**
+**Why 30 inches?**
 This is the `KNOWN_DISTANCE` constant. It's your calibration distance. You can change it, but must measure accurately!
 
 ### STEP 3: Verify Reference Images
@@ -174,7 +174,7 @@ python DistanceEstimation.py
 **Controls:**
 - Webcam window opens showing detections
 - Distance displayed in inches above each object
-- Alert sound triggers when object is < 30 inches
+- Alert sound triggers when object is < 25 inches
 - Press `'q'` to quit
 
 **What happens:**
@@ -186,7 +186,7 @@ python DistanceEstimation.py
    - Filters only person, cell phone, book
    - Calculates distance using formula
    - Draws bounding box + label with distance
-   - If distance < 30 inches → audio alert
+   - If distance < 25 inches → audio alert
 
 ### STEP 5: (Optional) Record Videos
 
@@ -268,7 +268,7 @@ def focal_length_finder(measured_distance, real_width, width_in_rf):
 **Example:**
 - Person at 45 inches → width = 200 pixels in reference image
 - Real person width = 16 inches (average shoulder width)
-- Focal length = (200 × 45) / 16 = 562.5 pixels
+- Focal length = (200 × 30) / 16 = 375 pixels
 
 This focal length is **property of your camera** - it stays constant!
 
@@ -333,7 +333,7 @@ To add more classes, you need to:
 
 ```python
 # In DistanceEstimation.py
-KNOWN_DISTANCE = 45  # Calibration distance in inches
+KNOWN_DISTANCE = 30  # Calibration distance in inches
 PERSON_WIDTH = 16    # Average person shoulder width in inches
 MOBILE_WIDTH = 3.0   # Average phone width in inches
 ```
@@ -361,7 +361,7 @@ cap = cv.VideoCapture(0)  # Change 0 to:
 ### Change Alert Distance
 
 ```python
-if distance < 30.0:  # Alert threshold in inches
+if distance < 25.0:  # Alert threshold in inches
     # trigger alert
 ```
 
